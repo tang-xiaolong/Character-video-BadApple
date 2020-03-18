@@ -3,157 +3,152 @@
 #include <stdlib.h>
 #include <string.h>
 #include<time.h>
+//è¯»å–ä½å›¾æ–‡ä»¶ç›¸å…³ä»£ç 
+#pragma comment(lib, "WINMM.LIB")
+BITMAPFILEHEADER fileHead;      //æ–‡ä»¶ä¿¡æ¯å¤´
+BITMAPINFOHEADER infoHead;      //ä½å›¾ä¿¡æ¯å¤´
+RGBQUAD pColorTable[256];       //é¢œè‰²è¡¨æŒ‡é’ˆ
+unsigned char *pBmpBuf;         //å›¾åƒæ•°æ®æŒ‡é’ˆ
+int bmpWidth;          //å›¾åƒçš„å®½
+int bmpHeight;        //å›¾åƒçš„é«˜
+int biBitCount;       //æ¯åƒç´ ä½æ•°
+int lineByte;         //æ¯è¡Œçš„å­—èŠ‚æ•°
 
-BITMAPFILEHEADER fileHead;      //ÎÄ¼şĞÅÏ¢Í·
-BITMAPINFOHEADER infoHead;      //Î»Í¼ĞÅÏ¢Í·
-RGBQUAD pColorTable[256];       //ÑÕÉ«±íÖ¸Õë
-unsigned char *pBmpBuf;         //Í¼ÏñÊı¾İÖ¸Õë
-int bmpWidth;          //Í¼ÏñµÄ¿í
-int bmpHeight;        //Í¼ÏñµÄ¸ß
-int biBitCount;       //Ã¿ÏñËØÎ»Êı
-int lineByte;         //Ã¿ĞĞµÄ×Ö½ÚÊı
+
+
 unsigned char a[1000][1000];
 unsigned char *Pre = NULL;
 char *out;
-char info[] = {"$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,\"^` ."};
-int len ,reg = 42;
-clock_t stime,ftime,ltime,lt;
+char info[] = { "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^` ." };
+int len;//è®°å½•Infoé•¿åº¦
+clock_t startTime;//è®°å½•å¼€å§‹æ—¶é—´
+float timeFramRate = 0;//frame/timeSum  å¾—åˆ°å¸§æ•°å’Œæ€»æ—¶é—´çš„æ¯”ä¾‹ï¼Œé¿å…æ¯æ¬¡è®¡ç®—
 
 
 #define name "frame\\badapple"
 #define frame 5216
+//é€šè¿‡è¾“å‡ºé—´éš”å’Œä¸Šä¸‹è¾¹è·æ§åˆ¶æ‰“å°å‡ºæ¥çš„ä¿¡æ¯å¤šå°‘  é¿å…è¾“å‡ºå¤ªå¤šæ˜¾ç¤ºä¸ä¸‹
+#define Interval 2  //æ¯éš”å‡ è¡Œè¾“å‡ºä¸€è¡Œ
+#define Margin 10	//ä¸Šä¸‹è¾¹è· 
 
-//»¹¿ÉÒÔÍ¨¹ı¿ØÖÆPrintº¯ÊıÖĞ´òÓ¡µÄĞĞÊıÒÔ¼°ÁĞÊıÀ´¿ØÖÆ¸üĞÂËÙÂÊ
-#define clearDegree 2  //¸ô¼¸Ö¡¶ÁÒ»´Î
-#define UpdateTime 76 //Ã¿´Î´òÓ¡ĞİÃß¶à¾Ã
-#pragma comment(lib, "WINMM.LIB")
-
-
-
+//å‡½æ•°å£°æ˜
 int Read(const char *bmpName);
-int Run(const char *bmpName);     /*º¯ÊıÔ­ĞÍ*/
+int Run(const char *bmpName);     /*å‡½æ•°åŸå‹*/
 void Print();
 void Pos(int x, int y);
 
 
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
 	out = (char *)malloc(sizeof(char) * 40000);
 	system("mode con cols=220 lines=150");
 	system("color F0");
-	
-	len = strlen(info) - 1;
+
+	timeFramRate = frame / 219000.0f;//3:39ç§’å³219ç§’  å³219000å¾®å¦™
+	len = strlen(info);
 	Run(name);
 	free(out);
 	return 0;
 }
+//è·å–å½“å‰æ—¶é—´åº”è¯¥æ’­æ”¾çš„å›¾ç‰‡ é€šè¿‡å½“å‰æ—¶é—´å‡å»å¼€å§‹æ—¶é—´å¾—åˆ°ç»è¿‡äº†å¤šä¹…ï¼Œç„¶åä¹˜ä»¥æ¯”ä¾‹çš„åˆ°ç¬¬å‡ å¼ ï¼Œå‡1å˜æˆä¸‹æ ‡
+int GetIndex()
+{
+	return (int)((clock() - startTime) * timeFramRate - 1);
+}
 
 int Run(const char *bmpName)
 {
-	register int i;
-	int count = 0,temp = frame;
+	int nowIndex, preIndex = -1;
+	int count = 0, temp = frame;
 	char path[30] = "\0";
 	char format[15];
-	while(temp > 0)
+	while (temp > 0)
 	{
 		++count;
 		temp /= 10;
 	}
-	sprintf(format,"%s%dd%s","%s%0",count,"%s");
-	//printf("%s\n",format);
+	sprintf(format, "%s%dd%s", "%s%0", count, "%s");
 	PlaySound("BadApple.wav", NULL, SND_FILENAME | SND_ASYNC);
-	stime = lt = clock();
-	printf("%ld",stime);
-	//Sleep(130);
-	for(i = 0;i < frame;)
+	startTime = clock();
+	while ((nowIndex = GetIndex()) < frame)
 	{
-		if(i % 30 == 0)
+		if (nowIndex != preIndex)
 		{
-			reg = 40;
-		}
-		ftime = clock();
-		if((ftime - stime) >= reg)
-		{
-			reg = 42;
+			preIndex = nowIndex;
 			path[0] = '\0';
-			sprintf(path,format,bmpName,i,".BMP");
-			//printf("%s",path);
-			++i;
-			stime = ftime;
+			sprintf(path, format, bmpName, nowIndex, ".BMP");
 			Read(path);
 			Print();
 		}
 	}
-	ltime = clock();
-
-	if(Pre)
+	if (Pre)
 		free(Pre);
 	system("cls");
-	printf("×Ü¹²ÊÇ»¨ÁË%dÃë\n",(ltime-lt)/CLK_TCK);
-	puts("Ğ·Ğ·ĞÀÉÍ~ ");
-	return 1; 
-} 
+	printf("æ€»å…±æ˜¯èŠ±äº†%dç§’\n", (clock() - startTime) / CLK_TCK);
+	puts("èŸ¹èŸ¹æ¬£èµ~ ");
+	return 1;
+}
 void Print()
 {
-	int i,j;
+	int i, j;
 	int x = 0;
-	Pos(0,0);
-	for(i = 17;i < bmpHeight - 17;++i)
+	Pos(0, 0);
+	int maxRow = bmpHeight - Margin;
+	for (i = Margin; i < maxRow; ++i)
 	{
-		if(i % clearDegree != 0)
+		if (i % Interval != 0)
 			continue;
-		for(j = 0;j < bmpWidth;++j)
+		for (j = 0; j < bmpWidth; ++j)
 		{
-			//if(j % clearDegree == 0)
-				out[x++] = info[(int)(a[i][j]/256.0*len)];
+			out[x++] = info[(int)(a[i][j] / 256.0*len)];
 		}
-		out[x++] = '\n';	
+		out[x++] = '\n';
 	}
 	out[x] = '\0';
-	printf("%s",out);
+	printf("%s", out);
 }
 int Read(const char *bmpName)
 {
-	FILE *fp = fopen(bmpName,"rb");              /*¶ş½øÖÆ¶Á·½Ê½´ò¿ªÖ¸¶¨µÄÍ¼ÏñÎÄ¼ş*/
-	register int i,j;
+	FILE *fp = fopen(bmpName, "rb");              /*äºŒè¿›åˆ¶è¯»æ–¹å¼æ‰“å¼€æŒ‡å®šçš„å›¾åƒæ–‡ä»¶*/
+	register int i, j;
 	unsigned char * pix = NULL;
-	if(fp==NULL) 
+	if (fp == NULL)
 		return 0;
-	fread(&fileHead,sizeof(BITMAPFILEHEADER),1,fp);    /*¶ÁÎÄ¼şĞÅÏ¢Í·*/
-	fread(&infoHead,sizeof(BITMAPINFOHEADER),1,fp);    /*¶ÁÎ»Í¼ĞÅÏ¢Í·*/
-	bmpWidth=infoHead.biWidth;     /*»ñÈ¡Í¼Ïñ¿í£¬¸ß£¬Ã¿ÏñËØËùÕ¼Î»ÊıµÈĞÅÏ¢ */
-	bmpHeight=infoHead.biHeight;
-	biBitCount=infoHead.biBitCount;
-	lineByte=(bmpWidth*biBitCount/8+3)/4*4;    /*¼ÆËãÃ¿ĞĞ×Ö½ÚÊı(±ØĞëÊÇ4µÄ±¶Êı)*/
+	fread(&fileHead, sizeof(BITMAPFILEHEADER), 1, fp);    /*è¯»æ–‡ä»¶ä¿¡æ¯å¤´*/
+	fread(&infoHead, sizeof(BITMAPINFOHEADER), 1, fp);    /*è¯»ä½å›¾ä¿¡æ¯å¤´*/
+	bmpWidth = infoHead.biWidth;     /*è·å–å›¾åƒå®½ï¼Œé«˜ï¼Œæ¯åƒç´ æ‰€å ä½æ•°ç­‰ä¿¡æ¯ */
+	bmpHeight = infoHead.biHeight;
+	biBitCount = infoHead.biBitCount;
+	lineByte = (bmpWidth*biBitCount / 8 + 3) / 4 * 4;    /*è®¡ç®—æ¯è¡Œå­—èŠ‚æ•°(å¿…é¡»æ˜¯4çš„å€æ•°)*/
 
-	if(Pre == NULL)
+	if (Pre == NULL)
 	{
-		pix=(unsigned char *)malloc(lineByte+1);
+		pix = (unsigned char *)malloc(lineByte + 1);
 		Pre = pix;
 	}
 	else
 		pix = Pre;
-	if(pix == NULL)
+	if (pix == NULL)
 		return 0;
-	for(i = 0;i < bmpHeight;++i)
+	for (i = 0; i < bmpHeight; ++i)
 	{
-		fread(pix,1,lineByte,fp);
-		for(j = 0;j < bmpWidth;++j)
+		fread(pix, 1, lineByte, fp);
+		for (j = 0; j < bmpWidth; ++j)
 		{
-			a[bmpHeight-i-1][j] = (int)((unsigned char)(pix[j*3+2] * 0.3 + pix[j*3+1] * 0.59 + pix[j*3] * 0.11));
+			a[bmpHeight - i - 1][j] = (int)((unsigned char)(pix[j * 3 + 2] * 0.3 + pix[j * 3 + 1] * 0.59 + pix[j * 3] * 0.11));
 		}
 	}
 	fclose(fp);
-	return 1; 
-} 
+	return 1;
+}
 
-void Pos(int x, int y)//ÉèÖÃ¹â±êÎ»ÖÃ
-{//Òª×¢ÒâÕâÀïµÄxºÍyÓëÎÒÃÇÊı×éµÄxºÍyÊÇ·´µÄ
+void Pos(int x, int y)//è®¾ç½®å…‰æ ‡ä½ç½®
+{//è¦æ³¨æ„è¿™é‡Œçš„xå’Œyä¸æˆ‘ä»¬æ•°ç»„çš„xå’Œyæ˜¯åçš„
 	COORD pos;
 	HANDLE hOutput;
 	pos.X = x;
 	pos.Y = y;
-	hOutput = GetStdHandle(STD_OUTPUT_HANDLE);//·µ»Ø±ê×¼µÄÊäÈë¡¢Êä³ö»ò´íÎóµÄÉè±¸µÄ¾ä±ú£¬Ò²¾ÍÊÇ»ñµÃÊäÈë¡¢Êä³ö/´íÎóµÄÆÁÄ»»º³åÇøµÄ¾ä±ú
+	hOutput = GetStdHandle(STD_OUTPUT_HANDLE);//è¿”å›æ ‡å‡†çš„è¾“å…¥ã€è¾“å‡ºæˆ–é”™è¯¯çš„è®¾å¤‡çš„å¥æŸ„ï¼Œä¹Ÿå°±æ˜¯è·å¾—è¾“å…¥ã€è¾“å‡º/é”™è¯¯çš„å±å¹•ç¼“å†²åŒºçš„å¥æŸ„
 	SetConsoleCursorPosition(hOutput, pos);
 }
