@@ -19,7 +19,7 @@ int lineByte;         //每行的字节数
 unsigned char a[1000][1000];
 unsigned char *Pre = NULL;
 char *out;
-char info[] = { "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^` ." };
+char info[] = { "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`. " };
 int len;//记录Info长度
 clock_t startTime;//记录开始时间
 float timeFramRate = 0;//frame/timeSum  得到帧数和总时间的比例，避免每次计算
@@ -29,7 +29,7 @@ float timeFramRate = 0;//frame/timeSum  得到帧数和总时间的比例，避�
 #define frame 5216
 //通过输出间隔和上下边距控制打印出来的信息多少  避免输出太多显示不下
 #define Interval 2  //每隔几行输出一行
-#define Margin 10	//上下边距 
+#define Margin 13	//下边距 
 
 //函数声明
 int Read(const char *bmpName);
@@ -95,7 +95,7 @@ void Print()
 	int x = 0;
 	Pos(0, 0);
 	int maxRow = bmpHeight - Margin;
-	for (i = Margin; i < maxRow; ++i)
+	for (i = 0; i < maxRow; ++i)
 	{
 		if (i % Interval != 0)
 			continue;
